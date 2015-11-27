@@ -8,10 +8,10 @@ endif
 
 all: $(PACKAGE)
 
-$(PACKAGE): config.go main.go manifest.go package.go repo.go
+$(PACKAGE): config.go main.go manifest.go middleware.go package.go repo.go version.go
 	go build -x -o $(PACKAGE)
 
-test: $(PACKAGE) *_test.go
+test: $(PACKAGE)
 	go test -v
 
 clean:
@@ -22,4 +22,6 @@ run: $(PACKAGE)
 	./$(PACKAGE)
 
 get-deps:
-	go get -u golang.org/x/text/encoding
+	go get -u github.com/codegangsta/negroni
+	go get -u github.com/hashicorp/go-version
+

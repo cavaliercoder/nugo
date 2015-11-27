@@ -6,7 +6,9 @@ import (
 
 func TestLoadPackages(t *testing.T) {
 	// load package files
-	packages, err := LoadPackageFiles()
+	repo := NewRepository("packages")
+
+	packages, err := repo.GetPackages()
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -27,10 +29,6 @@ func TestLoadPackages(t *testing.T) {
 
 		if p.Manifest.Description == "" {
 			t.Errorf("Package %s has no description", p.Path)
-		}
-
-		if p.Manifest.Summary == "" {
-			t.Errorf("Package %s has no summary", p.Path)
 		}
 	}
 

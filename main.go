@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"github.com/codegangsta/negroni"
 	"io"
-	"log"
 	"net/http"
 	"time"
 )
@@ -14,35 +14,13 @@ func main() {
 	// load config
 	config := GetConfig()
 
-	// init router
-	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
-		log.Printf("Get: %s", req.URL)
-		SetDefaultHeaders(res)
-
-		switch req.URL.Path {
-		case "/":
-			GetRoot(res, req)
-			break
-
-		case "/$metadata":
-			http.ServeFile(res, req, "metadata.xml")
-			break
-
-		case "/Search()":
-			GetSearch(res, req)
-			break
-		}
-
-	})
+	// init http handlers
+	n := negroni.Classic()
+	n.Use(negroni.HandlerFunc(DefaultHeaders))
+	n.Use(negroni.HandlerFunc(Mux))
 
 	// serve
-	http.ListenAndServe(config.ListenPort, nil)
-}
-
-func PanicOn(err error) {
-	if err != nil {
-		panic(err)
-	}
+	n.Run(config.ListenPort)
 }
 
 func XMLEscape(s string) string {
@@ -50,12 +28,6 @@ func XMLEscape(s string) string {
 	xml.EscapeText(&b, []byte(s))
 
 	return string(b.Bytes())
-}
-
-func SetDefaultHeaders(res http.ResponseWriter) {
-	res.Header().Set("Server", "nugo")
-	res.Header().Set("Cache-Control", "no-cache")
-	res.Header().Set("Content-Type", "application/atom+xml;charset=utf-8")
 }
 
 func GetRoot(res http.ResponseWriter, req *http.Request) {
@@ -125,6 +97,16 @@ func GetSearch(res http.ResponseWriter, req *http.Request) {
 
 	// print packages
 	for _, p := range packages {
+		skip := false
+
+		if !p.IsLatest {
+			skip = true
+		}
+
+		if skip {
+			continue
+		}
+
 		id := XMLEscape(p.Manifest.ID)
 		version := XMLEscape(p.Manifest.Version)
 

@@ -14,6 +14,7 @@ type Package struct {
 	CreatedDate  time.Time
 	ModifiedDate time.Time
 	Manifest     Manifest
+	IsLatest     bool
 }
 
 func LoadPackage(path string) (*Package, error) {
