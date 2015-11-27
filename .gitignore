@@ -2,3 +2,4 @@ nugo
 nugo.exe
 packages/**
 packages/*.nupkg
+.vagrant/
