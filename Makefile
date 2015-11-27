@@ -22,5 +22,4 @@ run: $(PACKAGE)
 	./$(PACKAGE)
 
 get-deps:
-	go get -u github.com/gorilla/mux
-	go get -u github.com/codegangsta/negroni
+	go get -u golang.org/x/text/encoding
