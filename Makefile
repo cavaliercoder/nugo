@@ -1,6 +1,10 @@
-PACKAGE = nugo.exe
-
-RM = del
+ifeq ($(OS),Windows_NT)
+	PACKAGE = nugo.exe
+	RM = del
+else
+	PACKAGE = nugo
+	RM = rm -f
+endif
 
 all: $(PACKAGE)
 
