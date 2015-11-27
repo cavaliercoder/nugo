@@ -8,7 +8,7 @@ endif
 
 all: $(PACKAGE)
 
-$(PACKAGE): config.go main.go manifest.go middleware.go package.go repo.go version.go
+$(PACKAGE): config.go log.go main.go manifest.go middleware.go package.go repo.go version.go
 	go build -x -o $(PACKAGE)
 
 test: $(PACKAGE)

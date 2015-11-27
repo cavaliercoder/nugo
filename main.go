@@ -15,12 +15,13 @@ func main() {
 	config := GetConfig()
 
 	// init http handlers
-	n := negroni.Classic()
+	n := negroni.New(negroni.NewRecovery())
+	n.Use(NewLogger())
 	n.Use(negroni.HandlerFunc(DefaultHeaders))
 	n.Use(negroni.HandlerFunc(Mux))
 
 	// serve
-	n.Run(config.ListenPort)
+	http.ListenAndServe(config.ListenPort, n)
 }
 
 func XMLEscape(s string) string {
@@ -99,7 +100,7 @@ func GetSearch(res http.ResponseWriter, req *http.Request) {
 	for _, p := range packages {
 		skip := false
 
-		if !p.IsLatest {
+		if !p.IsLatest && req.URL.Query().Get("filter") == "IsLatestVersion" {
 			skip = true
 		}
 
