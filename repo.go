@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strings"
 )
 
@@ -13,9 +14,25 @@ type Repository struct {
 }
 
 type RepositorySearchParams struct {
-	Filter struct {
-		LatestOnly bool
+	SearchTerm string
+	Limit      int
+	Skip       int
+	Filter     struct {
+		LatestOnly        bool
+		IncludePrerelease bool
+		TargetFramework   string
 	}
+}
+
+func NewRepositorySearchParams(v url.Values) *RepositorySearchParams {
+	params := RepositorySearchParams{}
+
+	params.SearchTerm = strings.Trim(v.Get("searchTerm"), " '")
+	params.Filter.LatestOnly = v.Get("$filter") == "IsLatestVersion"
+	params.Filter.IncludePrerelease = v.Get("includePrerelease") == "true"
+	params.Filter.TargetFramework = strings.Trim(v.Get("targetFramework"), " '")
+
+	return &params
 }
 
 func NewRepository(path string) *Repository {
@@ -30,7 +47,7 @@ func (c *Repository) String() string {
 }
 
 func (c *Repository) RefreshCache() error {
-	LogInfof("Refreshing package cached for repo: %s", c)
+	LogInfof("Refreshing package cache for repo: %s", c)
 
 	// get a list of files in the repository directory
 	files, err := ioutil.ReadDir(c.FilePath)
@@ -91,7 +108,7 @@ func (c *Repository) RefreshCache() error {
 	return nil
 }
 
-func (c *Repository) GetPackages(params RepositorySearchParams) ([]Package, error) {
+func (c *Repository) GetPackages(params *RepositorySearchParams) ([]Package, error) {
 	LogDebugf("Starting search: %#v", params)
 	// update master package list
 	if !c.cacheValid {
@@ -101,22 +118,49 @@ func (c *Repository) GetPackages(params RepositorySearchParams) ([]Package, erro
 		}
 	}
 
+	// inclusive or exclusive search?
+	skipByDefault := params.SearchTerm != ""
+	if skipByDefault {
+		LogDebugf("All packages will be excluded unless explicitely included")
+	} else {
+		LogDebugf("All packages will be included unless explicitely excluded")
+	}
+
 	// apply search params
 	out := make([]Package, 0)
 	for _, p := range c.packages {
-		skip := false
+		skip := skipByDefault
+
+		// filter by term
+		if params.SearchTerm != "" && stringInString(params.SearchTerm, p.Manifest.ID, p.Manifest.Tags, p.Manifest.Description) {
+			LogDebugf("Package matches search term: %s", &p)
+			skip = false
+		}
 
 		// filter by latest only
 		if params.Filter.LatestOnly && !p.IsLatest {
-			LogDebugf("Skipping superceded package: %s", &p)
+			LogDebugf("Package is superceded: %s", &p)
 			skip = true
 		}
 
 		if !skip {
-			LogDebugf("Adding package to search results: %s", &p)
 			out = append(out, p)
 		}
 	}
 
+	// TODO: Implement skip and limit filters
+
 	return out, nil
+}
+
+func stringInString(needle string, haystacks ...string) bool {
+	needle = strings.ToLower(needle)
+
+	for _, haystack := range haystacks {
+		if strings.Contains(strings.ToLower(haystack), needle) {
+			return true
+		}
+	}
+
+	return false
 }

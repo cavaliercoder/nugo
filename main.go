@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"github.com/codegangsta/negroni"
 	"io"
 	"net/http"
 	"time"
@@ -14,15 +13,9 @@ func main() {
 	// load config
 	config := GetConfig()
 
-	// init http handlers
-	n := negroni.New(negroni.NewRecovery())
-	n.Use(NewLogger())
-	n.Use(negroni.HandlerFunc(DefaultHeaders))
-	n.Use(negroni.HandlerFunc(Mux))
-
 	// serve
 	LogInfof("Listening on %s", config.ListenPort)
-	http.ListenAndServe(config.ListenPort, n)
+	http.ListenAndServe(config.ListenPort, NewHandler())
 }
 
 func XMLEscape(s string) string {
@@ -79,12 +72,11 @@ func printDateProperty(w io.Writer, tag string, value time.Time) {
 func GetSearch(res http.ResponseWriter, req *http.Request) {
 	config := GetConfig()
 
-	// search params
-	params := RepositorySearchParams{}
-	params.Filter.LatestOnly = req.URL.Query().Get("$filter") == "IsLatestVersion"
+	// setup search params
+	params := NewRepositorySearchParams(req.URL.Query())
 
-	// load packages from cache
-	packages, err := GetConfig().Repositories[0].GetPackages(params)
+	// search for packages
+	packages, err := config.Repositories[0].GetPackages(params)
 	PanicOn(err)
 
 	// use buffered output so when can measure the content length
