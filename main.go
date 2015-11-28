@@ -21,6 +21,7 @@ func main() {
 	n.Use(negroni.HandlerFunc(Mux))
 
 	// serve
+	LogInfof("Listening on %s", config.ListenPort)
 	http.ListenAndServe(config.ListenPort, n)
 }
 
@@ -78,11 +79,13 @@ func printDateProperty(w io.Writer, tag string, value time.Time) {
 func GetSearch(res http.ResponseWriter, req *http.Request) {
 	config := GetConfig()
 
+	// search params
+	params := RepositorySearchParams{}
+	params.Filter.LatestOnly = req.URL.Query().Get("$filter") == "IsLatestVersion"
+
 	// load packages from cache
-	packages, err := GetConfig().Repositories[0].GetPackages()
-	if err != nil {
-		panic(err)
-	}
+	packages, err := GetConfig().Repositories[0].GetPackages(params)
+	PanicOn(err)
 
 	// use buffered output so when can measure the content length
 	var b bytes.Buffer
@@ -98,16 +101,6 @@ func GetSearch(res http.ResponseWriter, req *http.Request) {
 
 	// print packages
 	for _, p := range packages {
-		skip := false
-
-		if !p.IsLatest && req.URL.Query().Get("filter") == "IsLatestVersion" {
-			skip = true
-		}
-
-		if skip {
-			continue
-		}
-
 		id := XMLEscape(p.Manifest.ID)
 		version := XMLEscape(p.Manifest.Version)
 
@@ -136,7 +129,6 @@ func GetSearch(res http.ResponseWriter, req *http.Request) {
 		printDateProperty(&b, "Published", time.Now().UTC())
 
 		fmt.Fprint(&b, `</m:properties>`)
-
 		fmt.Fprint(&b, `</entry>`)
 	}
 

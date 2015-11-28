@@ -14,9 +14,21 @@ type Logger struct {
 	*log.Logger
 }
 
+var logger *log.Logger = log.New(os.Stdout, "[nugo] ", 0)
+
+func LogDebugf(format string, a ...interface{}) {
+	if os.Getenv("NUGO_DEBUG") == "1" {
+		logger.Printf(format, a...)
+	}
+}
+
+func LogInfof(format string, a ...interface{}) {
+	logger.Printf(format, a...)
+}
+
 // NewLogger returns a new Logger instance
 func NewLogger() *Logger {
-	return &Logger{log.New(os.Stdout, "[nugo] ", 0)}
+	return &Logger{logger}
 }
 
 func (l *Logger) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {

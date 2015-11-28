@@ -21,8 +21,9 @@ func GetConfig() *Configuration {
 			Repositories: make([]*Repository, 0),
 		}
 
-		config.Repositories = append(config.Repositories, NewRepository(config.PackagePath))
-		config.Repositories[0].GetPackages()
+		repo := NewRepository(config.PackagePath)
+		PanicOn(repo.RefreshCache())
+		config.Repositories = append(config.Repositories, repo)
 	}
 
 	return config

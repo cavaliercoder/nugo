@@ -17,6 +17,10 @@ type Package struct {
 	IsLatest     bool
 }
 
+func (c *Package) String() string {
+	return fmt.Sprintf("(id='%s', version='%s')", c.Manifest.ID, c.Manifest.Version)
+}
+
 func LoadPackage(path string) (*Package, error) {
 	p := &Package{}
 
