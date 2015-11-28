@@ -22,8 +22,10 @@ func (c *Package) String() string {
 }
 
 func LoadPackage(path string) (*Package, error) {
+	LogDebugf("Reading package: %s", path)
 	p := &Package{}
 
+	// get file info
 	m, err := os.Stat(path)
 	PanicOn(err)
 
@@ -35,16 +37,17 @@ func LoadPackage(path string) (*Package, error) {
 	// read package zip file
 	r, err := zip.OpenReader(p.Path)
 	PanicOn(err)
-
 	defer r.Close()
 
+	// find .nuspec manifest file in zip file
 	for _, f := range r.File {
 		if strings.HasSuffix(strings.ToLower(f.Name), ".nuspec") {
+			// open manifest
 			mr, err := f.Open()
 			PanicOn(err)
-
 			defer mr.Close()
 
+			// decode
 			m, err := ReadManifest(mr)
 			PanicOn(err)
 

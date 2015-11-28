@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type Repository struct {
@@ -47,54 +48,63 @@ func (c *Repository) String() string {
 }
 
 func (c *Repository) RefreshCache() error {
-	LogInfof("Refreshing package cache for repo: %s", c)
+	LogDebugf("Refreshing package cache for repo: %s", c)
+	start := time.Now()
 
 	// get a list of files in the repository directory
 	files, err := ioutil.ReadDir(c.FilePath)
 	PanicOn(err)
 
-	packages := make([]*Package, 0)
-	latestPackages := make(map[string]*Package, 0)
-
+	// fan out and load each package
+	packageCount := 0
+	packageChannel := make(chan *Package, 0)
 	for _, file := range files {
-		// filter for .nupkg files
 		if !file.IsDir() && strings.HasSuffix(strings.ToLower(file.Name()), ".nupkg") {
-			path := fmt.Sprintf("%s/%s", c.FilePath, file.Name())
+			packageCount++
 
-			// load the package
-			p, err := LoadPackage(path)
-			if err != nil {
-				return err
-			}
-
-			packages = append(packages, p)
-
-			id := strings.ToLower(p.Manifest.ID)
-
-			// update latest version pointer
-			if latest, ok := latestPackages[id]; ok {
-				// compare version with previous
-				v1, err := NewVersion(latest.Manifest.Version)
+			// load the package in parallel
+			go func(filename string) {
+				path := fmt.Sprintf("%s/%s", c.FilePath, filename)
+				p, err := LoadPackage(path)
+				// TODO: Better error handling for erroneous packages
 				PanicOn(err)
 
-				v2, err := NewVersion(p.Manifest.Version)
-				PanicOn(err)
-
-				if v2.GreaterThan(v1) {
-					latestPackages[id] = p
-				}
-			} else {
-				latestPackages[id] = p
-			}
+				packageChannel <- p
+			}(file.Name())
 		}
 	}
 
-	// set latest versions
+	// parse packages as they are loaded
+	packages := make([]*Package, packageCount)
+	latestPackages := make(map[string]*Package, 0)
+	for i := 0; i < packageCount; i++ {
+		p := <-packageChannel
+		packages[i] = p
+
+		// update latest version pointer
+		id := strings.ToLower(p.Manifest.ID)
+		if latest, ok := latestPackages[id]; ok {
+			// compare version with previous
+			v1, err := NewVersion(latest.Manifest.Version)
+			PanicOn(err)
+
+			v2, err := NewVersion(p.Manifest.Version)
+			PanicOn(err)
+
+			if v2.GreaterThan(v1) {
+				latestPackages[id] = p
+			}
+		} else {
+			latestPackages[id] = p
+		}
+	}
+
+	// set latest version property
 	for _, p := range latestPackages {
 		p.IsLatest = true
 	}
 
-	// copy package to repo struct
+	// dereference package slice
 	out := make([]Package, len(packages))
 	for i, p := range packages {
 		out[i] = *p
@@ -105,18 +115,13 @@ func (c *Repository) RefreshCache() error {
 	c.packages = out
 	c.cacheValid = true
 
+	LogInfof("Updated repository '%s' with %d packages in %v", c, packageCount, time.Since(start))
+
 	return nil
 }
 
 func (c *Repository) GetPackages(params *RepositorySearchParams) ([]Package, error) {
 	LogDebugf("Starting search: %#v", params)
-	// update master package list
-	if !c.cacheValid {
-		err := c.RefreshCache()
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	// inclusive or exclusive search?
 	skipByDefault := params.SearchTerm != ""
