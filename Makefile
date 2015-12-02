@@ -9,7 +9,7 @@ endif
 all: $(PACKAGE)
 
 $(PACKAGE): config.go log.go main.go manifest.go middleware.go package.go repo.go version.go
-	go build -x -o $(PACKAGE)
+	CGO_ENABLED=0 go build -x -ldflags="-s" -o $(PACKAGE)
 
 test: $(PACKAGE)
 	go test -v
