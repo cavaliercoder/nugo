@@ -14,10 +14,5 @@ listenPort: :1105
 
 repositories:
   -
-    name: Nuget-Test
-    localPath: packages/nuget
-    remotePath: nuget
-  -
-    name: Choco-Test
-    localPath: packages/chocolatey
-    remotePath: chocolatey
+    name: Default
+    localPath: packages/

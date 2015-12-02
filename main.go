@@ -24,18 +24,6 @@ func main() {
 		}
 	}()
 
-	// register repository URLs
-	mux := http.NewServeMux()
-	for _, r := range config.Repositories {
-		LogDebugf("Registering route %s to repository: '%s'", r.RemotePath, r)
-		mux.HandleFunc(r.RemotePath, func(res http.ResponseWriter, req *http.Request) {
-			LogDebugf("Routing request to repository '%s'", r.RemotePath)
-			Router(res, req, r)
-		})
-	}
-
-	handler := NewHandler(mux)
-
 	// precache all repositories
 	if repoCount == 0 {
 		panic("No package repositories are defined")
@@ -56,30 +44,12 @@ func main() {
 
 	LogInfof("Precached %d repositories", repoCount)
 
-	// serve
+	// initialize http handler
+	handler := NewHandler(config)
+
+	// start server
 	LogInfof("Listening on %s", config.ListenPort)
 	http.ListenAndServe(config.ListenPort, handler)
-}
-
-// Mux routes client requests to appropriate handler.
-func Router(res http.ResponseWriter, req *http.Request, repo *Repository) {
-	LogDebugf("Routing request: %s for repo registered at %s", req.URL.Path, repo.RemotePath)
-
-	path := req.URL.Path[len(repo.RemotePath)-1:]
-
-	switch path {
-	case "/":
-		GetRoot(res, req)
-		break
-
-	case "/$metadata":
-		http.ServeFile(res, req, "metadata.xml")
-		break
-
-	case "/Search()":
-		GetSearch(res, req, repo)
-		break
-	}
 }
 
 func XMLEscape(s string) string {

@@ -17,6 +17,7 @@ type Repository struct {
 }
 
 type RepositorySearchParams struct {
+	ByID       string
 	SearchTerm string
 	Limit      int
 	Skip       int
@@ -126,7 +127,7 @@ func (c *Repository) GetPackages(params *RepositorySearchParams) ([]Package, err
 	LogDebugf("Starting search: %#v", params)
 
 	// inclusive or exclusive search?
-	skipByDefault := params.SearchTerm != ""
+	skipByDefault := params.ByID != "" || params.SearchTerm != ""
 	if skipByDefault {
 		LogDebugf("All packages will be excluded unless explicitely included")
 	} else {
@@ -137,6 +138,12 @@ func (c *Repository) GetPackages(params *RepositorySearchParams) ([]Package, err
 	out := make([]Package, 0)
 	for _, p := range c.packages {
 		skip := skipByDefault
+
+		// filter by ID
+		if params.ByID != "" && (strings.ToLower(p.Manifest.ID) == strings.ToLower(params.ByID)) {
+			LogDebugf("Package matches ID: %s", &p)
+			skip = false
+		}
 
 		// filter by term
 		if params.SearchTerm != "" && stringInString(params.SearchTerm, p.Manifest.ID, p.Manifest.Tags, p.Manifest.Description) {
