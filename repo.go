@@ -9,7 +9,9 @@ import (
 )
 
 type Repository struct {
-	FilePath   string
+	Name       string `yaml:"name"`
+	LocalPath  string `yaml:"localPath"`
+	RemotePath string `yaml:"remotePath"`
 	packages   []Package
 	cacheValid bool
 }
@@ -38,13 +40,13 @@ func NewRepositorySearchParams(v url.Values) *RepositorySearchParams {
 
 func NewRepository(path string) *Repository {
 	return &Repository{
-		FilePath:   path,
+		LocalPath:  path,
 		cacheValid: false,
 	}
 }
 
 func (c *Repository) String() string {
-	return c.FilePath
+	return c.Name
 }
 
 func (c *Repository) RefreshCache() error {
@@ -52,7 +54,7 @@ func (c *Repository) RefreshCache() error {
 	start := time.Now()
 
 	// get a list of files in the repository directory
-	files, err := ioutil.ReadDir(c.FilePath)
+	files, err := ioutil.ReadDir(c.LocalPath)
 	PanicOn(err)
 
 	// fan out and load each package
@@ -64,7 +66,7 @@ func (c *Repository) RefreshCache() error {
 
 			// load the package in parallel
 			go func(filename string) {
-				path := fmt.Sprintf("%s/%s", c.FilePath, filename)
+				path := fmt.Sprintf("%s/%s", c.LocalPath, filename)
 				p, err := LoadPackage(path)
 				// TODO: Better error handling for erroneous packages
 				PanicOn(err)
@@ -155,6 +157,7 @@ func (c *Repository) GetPackages(params *RepositorySearchParams) ([]Package, err
 
 	// TODO: Implement skip and limit filters
 
+	LogDebugf("Repo search yeilded %d results", len(out))
 	return out, nil
 }
 

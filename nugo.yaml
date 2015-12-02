@@ -1,0 +1,23 @@
+---
+### Option: listenPort
+#     Specifies the interface and TCP/IP port to listen on for client
+#     connections. The IP of the desired network interface should be given,
+#     followed by the desired TCP/IP, separated by a colon.
+#
+#     E.g. to listen on an IPv4 loopback device on port 1105: 127.0.0.1:1105
+#
+#     To listen all all available network interfaces, omit the IP address.
+#     E.g. :1105
+#
+# Default: :1105
+listenPort: :1105
+
+repositories:
+  -
+    name: Nuget-Test
+    localPath: packages/nuget
+    remotePath: nuget
+  -
+    name: Choco-Test
+    localPath: packages/chocolatey
+    remotePath: chocolatey

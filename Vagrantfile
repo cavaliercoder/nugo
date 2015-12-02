@@ -6,7 +6,7 @@ script = <<SCRIPT
 #sudo apt-get install -y golang make
 
 mkdir -p /home/vagrant/go
-chown vagrant.vagrant /home/vagrant
+chown -R vagrant.vagrant /home/vagrant
 cat > /home/vagrant/.profile <<EOL
 export GOPATH=/home/vagrant/go
 EOL

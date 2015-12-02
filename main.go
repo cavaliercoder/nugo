@@ -6,16 +6,80 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
 func main() {
 	// load config
 	config := GetConfig()
+	repoCount := len(config.Repositories)
+
+	// global error handler
+	defer func() {
+		if r := recover(); r != nil {
+			LogErrorf("%v", r)
+			LogInfof("Exiting...")
+			os.Exit(1)
+		}
+	}()
+
+	// register repository URLs
+	mux := http.NewServeMux()
+	for _, r := range config.Repositories {
+		LogDebugf("Registering route %s to repository: '%s'", r.RemotePath, r)
+		mux.HandleFunc(r.RemotePath, func(res http.ResponseWriter, req *http.Request) {
+			LogDebugf("Routing request to repository '%s'", r.RemotePath)
+			Router(res, req, r)
+		})
+	}
+
+	handler := NewHandler(mux)
+
+	// precache all repositories
+	if repoCount == 0 {
+		panic("No package repositories are defined")
+	}
+
+	c := make(chan bool, 0)
+	for _, r := range config.Repositories {
+		go func(r *Repository) {
+			PanicOn(r.RefreshCache())
+			c <- true
+		}(r)
+	}
+
+	// wait for cache functions to return
+	for i := 0; i < repoCount; i++ {
+		<-c
+	}
+
+	LogInfof("Precached %d repositories", repoCount)
 
 	// serve
 	LogInfof("Listening on %s", config.ListenPort)
-	http.ListenAndServe(config.ListenPort, NewHandler())
+	http.ListenAndServe(config.ListenPort, handler)
+}
+
+// Mux routes client requests to appropriate handler.
+func Router(res http.ResponseWriter, req *http.Request, repo *Repository) {
+	LogDebugf("Routing request: %s for repo registered at %s", req.URL.Path, repo.RemotePath)
+
+	path := req.URL.Path[len(repo.RemotePath)-1:]
+
+	switch path {
+	case "/":
+		GetRoot(res, req)
+		break
+
+	case "/$metadata":
+		http.ServeFile(res, req, "metadata.xml")
+		break
+
+	case "/Search()":
+		GetSearch(res, req, repo)
+		break
+	}
 }
 
 func XMLEscape(s string) string {
@@ -69,14 +133,14 @@ func printDateProperty(w io.Writer, tag string, value time.Time) {
 	fmt.Fprintf(w, `<d:%s m:type="Edm.DateTime">%s</d:%s>`, tag, value.Format("2006-01-02T15:04:05.999999Z"), tag)
 }
 
-func GetSearch(res http.ResponseWriter, req *http.Request) {
+func GetSearch(res http.ResponseWriter, req *http.Request, repo *Repository) {
 	config := GetConfig()
 
 	// setup search params
 	params := NewRepositorySearchParams(req.URL.Query())
 
 	// search for packages
-	packages, err := config.Repositories[0].GetPackages(params)
+	packages, err := repo.GetPackages(params)
 	PanicOn(err)
 
 	// use buffered output so when can measure the content length

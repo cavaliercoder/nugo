@@ -6,11 +6,11 @@ import (
 	"time"
 )
 
-func NewHandler() http.Handler {
+func NewHandler(router http.Handler) http.Handler {
 	n := negroni.New(negroni.NewRecovery())
 	n.Use(negroni.HandlerFunc(Logger))
 	n.Use(negroni.HandlerFunc(DefaultHeaders))
-	n.Use(negroni.HandlerFunc(Mux))
+	n.UseHandler(router)
 
 	return n
 }
@@ -38,25 +38,6 @@ func DefaultHeaders(res http.ResponseWriter, req *http.Request, next http.Handle
 	res.Header().Set("Server", "nugo")
 	res.Header().Set("Cache-Control", "no-cache")
 	res.Header().Set("Content-Type", "application/atom+xml;charset=utf-8")
-
-	next(res, req)
-}
-
-// Mux route client requests to appropriate handler.
-func Mux(res http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
-	switch req.URL.Path {
-	case "/":
-		GetRoot(res, req)
-		break
-
-	case "/$metadata":
-		http.ServeFile(res, req, "metadata.xml")
-		break
-
-	case "/Search()":
-		GetSearch(res, req)
-		break
-	}
 
 	next(res, req)
 }

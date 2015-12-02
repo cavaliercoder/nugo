@@ -23,5 +23,5 @@ run: $(PACKAGE)
 
 get-deps:
 	go get -u github.com/codegangsta/negroni
-	go get -u github.com/hashicorp/go-version
+	go get -u gopkg.in/yaml.v2
 
