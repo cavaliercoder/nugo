@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -22,14 +23,22 @@ var configPaths []string = []string{
 // config is a singleton cache for configuration loaded at start up
 var config *Configuration = nil
 
+func DefaultConfig() *Configuration {
+	hostname, err := os.Hostname()
+	PanicOn(err)
+
+	return &Configuration{
+		ListenPort:   ":1105",
+		Repositories: make([]*Repository, 0),
+		BaseURL:      fmt.Sprintf("http://%s:1105/", hostname),
+	}
+}
+
 // GetConfig returns runtime configuration for the Nugo server.
 func GetConfig() *Configuration {
 	if config == nil {
 		// create default configuration
-		config = &Configuration{
-			ListenPort:   ":1105",
-			Repositories: make([]*Repository, 0),
-		}
+		config = DefaultConfig()
 
 		// check default paths for a configuration file
 		var f *os.File = nil

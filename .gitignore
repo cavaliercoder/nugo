@@ -1,5 +1,6 @@
 nugo
 nugo.exe
+nugo.yaml
 packages/**
 packages/*.nupkg
 .vagrant/

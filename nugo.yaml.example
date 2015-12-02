@@ -16,3 +16,4 @@ repositories:
   -
     name: Default
     localPath: packages/
+    remotePath: /nuget/
