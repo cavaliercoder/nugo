@@ -4,7 +4,7 @@ ifeq ($(OS),Windows_NT)
 	RM = del
 else
 	PACKAGE = nugo
-	PACKAGE_ENV = "CGO_ENABLED=0"
+	PACKAGE_ENV = CGO_ENABLED=0
 	RM = rm -f
 endif
 

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -67,7 +67,7 @@ func (c *Repository) RefreshCache() error {
 
 			// load the package in parallel
 			go func(filename string) {
-				path := fmt.Sprintf("%s/%s", c.LocalPath, filename)
+				path := filepath.Join(c.LocalPath, filename)
 				p, err := LoadPackage(path)
 				// TODO: Better error handling for erroneous packages
 				PanicOn(err)
@@ -124,7 +124,7 @@ func (c *Repository) RefreshCache() error {
 }
 
 func (c *Repository) GetPackages(params *RepositorySearchParams) ([]Package, error) {
-	LogDebugf("Starting search: %#v", params)
+	LogDebugf("Starting search in repo '%s': %#v", c.Name, params)
 
 	// inclusive or exclusive search?
 	skipByDefault := params.ByID != "" || params.SearchTerm != ""

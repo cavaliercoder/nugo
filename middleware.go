@@ -69,12 +69,16 @@ func RepoRouter(repo *Repository) http.HandlerFunc {
 			break
 
 		case "/$metadata":
-			http.ServeFile(res, req, "metadata.xml")
+			GetMetadata(res, req)
 			break
 
 		case "/Search()":
 			GetSearch(res, req, repo)
 			break
+
+		default:
+			res.WriteHeader(http.StatusNotFound)
+			res.Write([]byte("404 Resource not found"))
 		}
 	}
 }

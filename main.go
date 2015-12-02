@@ -5,10 +5,15 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
 )
+
+// metadata caches the content of metadata.xml in memory.
+// TODO: Generate $metadata dynamically.
+var metadata []byte
 
 func main() {
 	// load config
@@ -77,6 +82,16 @@ func GetRoot(res http.ResponseWriter, req *http.Request) {
 	// flush buffer to client
 	res.Header().Set("Content-Length", fmt.Sprintf("%d", b.Len()))
 	res.Write(b.Bytes())
+}
+
+func GetMetadata(res http.ResponseWriter, req *http.Request) {
+	if len(metadata) == 0 {
+		b, err := ioutil.ReadFile("metadata.xml")
+		PanicOn(err)
+		metadata = b
+	}
+
+	res.Write(metadata)
 }
 
 func printStringProperty(w io.Writer, tag string, value string) {

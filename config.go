@@ -40,7 +40,7 @@ func GetConfig() *Configuration {
 		// create default configuration
 		config = DefaultConfig()
 
-		// check default paths for a configuration file
+		// search default paths for a configuration file
 		var f *os.File = nil
 		var err error
 		for _, path := range configPaths {
